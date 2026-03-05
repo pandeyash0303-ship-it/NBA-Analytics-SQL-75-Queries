@@ -228,48 +228,6 @@ Business Patterns │ RFM Segmentation · Outlier Detection · Pivot Table
 
 ---
 
-## 🛠️ How to Run
-
-**Option 1: DB Browser for SQLite (Recommended)**
-```
-1. Download: https://sqlitebrowser.org/
-2. Open NBA_DataWarehouse.db
-3. Go to "Execute SQL" tab
-4. Copy-paste any query from NBA_SQL_Analytics_Project.sql
-5. Press F5 to run
-```
-
-**Option 2: DBeaver (Professional Tool)**
-```
-1. New Connection → SQLite → Browse to NBA_DataWarehouse.db
-2. Open SQL Editor → paste queries → Ctrl+Enter
-```
-
-**Option 3: Command Line**
-```bash
-sqlite3 NBA_DataWarehouse.db
-.read NBA_SQL_Analytics_Project.sql
-```
-
-**Option 4: Python (for automation)**
-```python
-import sqlite3, pandas as pd
-
-conn = sqlite3.connect('NBA_DataWarehouse.db')
-
-# Run any query
-df = pd.read_sql("""
-    SELECT player_name, ROUND(avg_pts,1) AS ppg
-    FROM analytics_player_season
-    WHERE season = 2022 AND games_played >= 20
-    ORDER BY avg_pts DESC LIMIT 10
-""", conn)
-
-print(df)
-```
-
----
-
 ## 💼 Resume Bullet Points (Copy & Use)
 
 ```
@@ -305,13 +263,7 @@ print(df)
 
 ## 👤 Author
 
-**[Your Name]**  
+**[Yash Pandey]**  
 Data Analyst | SQL · Power BI · Excel · Python  
-📧 [your.email@example.com]  
-🔗 [linkedin.com/in/yourprofile]  
-💻 [github.com/yourusername]
-
----
-
-*Dataset sourced from Kaggle — NBA Games Dataset (2003–2022)*  
-*Project built for portfolio/resume demonstration purposes*
+📧 [pandeyash0303@gmail.com]  
+🔗 [https://www.linkedin.com/in/yash-pandey-0728yp/]
