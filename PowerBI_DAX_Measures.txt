@@ -1,0 +1,205 @@
+
+================================================================================
+NBA ANALYTICS — COMPLETE POWER BI DAX MEASURES LIBRARY
+================================================================================
+Import all CSVs from PowerBI_CSVs/ folder into Power BI Desktop.
+Set relationships as described in the Star Schema section below.
+Then paste each DAX measure into a new Measure in the relevant table.
+
+================================================================================
+STAR SCHEMA RELATIONSHIPS (Set in Model View)
+================================================================================
+FACT_Games[home_team_id]      → DIM_Teams[team_id]     (Many-to-One)
+FACT_Games[visitor_team_id]   → DIM_Teams[team_id]     (Many-to-One, inactive)
+FACT_Games[game_date_est]     → DIM_Date[date]          (Many-to-One)
+FACT_Games[season]            → DIM_Season[season]      (Many-to-One)
+ANALYTICS_TeamSeason[team_id] → DIM_Teams[team_id]     (Many-to-One)
+ANALYTICS_PlayerSeason[...]   → DIM_Teams[...]          (Many-to-One)
+
+================================================================================
+MEASURES — Paste into ANALYTICS_TeamSeason Table
+================================================================================
+
+-- 1. Total Games Played
+Total Games = COUNTROWS(FACT_Games)
+
+-- 2. Total Wins (Home Perspective)
+Total Wins = SUMX(FACT_Games, FACT_Games[home_team_wins])
+
+-- 3. Win Percentage
+Win % = 
+DIVIDE(
+    SUMX(ANALYTICS_TeamSeason, ANALYTICS_TeamSeason[total_wins]),
+    SUMX(ANALYTICS_TeamSeason, ANALYTICS_TeamSeason[total_games]),
+    0
+)
+
+-- 4. Net Rating
+Net Rating = 
+AVERAGEX(
+    ANALYTICS_TeamSeason,
+    ANALYTICS_TeamSeason[net_rating]
+)
+
+-- 5. Average eFG%
+Avg eFG% = 
+AVERAGEX(
+    ANALYTICS_TeamSeason,
+    ANALYTICS_TeamSeason[avg_efg_pct]
+) * 100
+
+-- 6. Pace Estimate
+Avg Pace = 
+AVERAGEX(
+    ANALYTICS_TeamSeason,
+    ANALYTICS_TeamSeason[pace_estimate]
+)
+
+-- 7. League Average Net Rating (for comparison line)
+League Avg Net Rating = 
+CALCULATE(
+    AVERAGEX(ANALYTICS_TeamSeason, ANALYTICS_TeamSeason[net_rating]),
+    ALL(ANALYTICS_TeamSeason[full_name])
+)
+
+-- 8. Net Rating vs League Avg
+Net Rating vs League = 
+[Net Rating] - [League Avg Net Rating]
+
+-- 9. Playoff Probability %
+Playoff Probability = 
+AVERAGEX(
+    ANALYTICS_PlayoffProbability,
+    ANALYTICS_PlayoffProbability[playoff_probability_pct]
+)
+
+-- 10. Conference Rank (using RANKX)
+Conference Rank = 
+RANKX(
+    FILTER(
+        ANALYTICS_PlayoffProbability,
+        ANALYTICS_PlayoffProbability[conference] = SELECTEDVALUE(ANALYTICS_PlayoffProbability[conference])
+        && ANALYTICS_PlayoffProbability[season] = SELECTEDVALUE(ANALYTICS_PlayoffProbability[season])
+    ),
+    ANALYTICS_PlayoffProbability[win_pct],
+    ,
+    DESC,
+    DENSE
+)
+
+-- 11. Top Scorer (for card visual)
+Top Scorer = 
+FIRSTNONBLANK(
+    TOPN(1, ANALYTICS_PlayerSeason, ANALYTICS_PlayerSeason[avg_pts], DESC),
+    ANALYTICS_PlayerSeason[player_name]
+)
+
+-- 12. Highest PPG
+Highest PPG = 
+MAXX(
+    ANALYTICS_PlayerSeason,
+    ANALYTICS_PlayerSeason[avg_pts]
+)
+
+-- 13. Team Win Streak (simplified - consecutive wins counter)
+Wins This Season = 
+SUMX(
+    FILTER(ANALYTICS_TeamSeason, ANALYTICS_TeamSeason[season] = MAX(ANALYTICS_TeamSeason[season])),
+    ANALYTICS_TeamSeason[total_wins]
+)
+
+-- 14. Points Scored vs Allowed
+Points Scored = AVERAGEX(ANALYTICS_TeamSeason, ANALYTICS_TeamSeason[avg_pts_scored])
+Points Allowed = AVERAGEX(ANALYTICS_TeamSeason, ANALYTICS_TeamSeason[avg_pts_allowed])
+
+-- 15. Monthly Win Rate (for trend chart)
+Monthly Win Rate = 
+DIVIDE(
+    SUM(ANALYTICS_MonthlyTrends[wins]),
+    SUM(ANALYTICS_MonthlyTrends[games]),
+    0
+) * 100
+
+-- 16. Best Net Rating Team
+Best Team = 
+FIRSTNONBLANK(
+    TOPN(1, ANALYTICS_TeamSeason, ANALYTICS_TeamSeason[net_rating], DESC),
+    ANALYTICS_TeamSeason[full_name]
+)
+
+-- 17. eFG% Color Flag (for conditional formatting)
+eFG% Flag = 
+IF([Avg eFG%] >= 55, "High", IF([Avg eFG%] >= 52, "Average", "Low"))
+
+-- 18. Playoff Status Label
+Playoff Status = 
+VAR Rank = [Conference Rank]
+RETURN
+    SWITCH(
+        TRUE(),
+        Rank <= 6, "✅ Playoffs",
+        Rank <= 8, "⚠️ Play-In",
+        Rank <= 10, "🔶 Play-In Risk",
+        "❌ Eliminated"
+    )
+
+================================================================================
+DASHBOARD PAGES TO CREATE IN POWER BI
+================================================================================
+
+PAGE 1: EXECUTIVE OVERVIEW
+--------------------------
+Visuals:
+• KPI Cards: Total Games, Total Teams, Avg Net Rating, Best Win%
+• Table: Team Standings (season slicer, conference filter)
+• Bar Chart: Net Rating by Team (colored Green/Red)
+• Donut Chart: Playoff Status breakdown (Clinched/Play-In/Eliminated)
+Slicers: Season, Conference
+
+PAGE 2: FOUR FACTORS DEEP DIVE
+-------------------------------
+Visuals:
+• Scatter Plot: eFG% (X) vs Net Rating (Y) — bubble size = Wins
+• Bar Chart: Top 10 Teams by eFG%
+• Line Chart: Monthly Net Rating Trend (per team filter)
+• Matrix: Four Factors by Team (conditional formatted)
+Slicers: Season, Team
+
+PAGE 3: PLAYOFF PROBABILITY
+---------------------------
+Visuals:
+• Table: East Conference Standings with Playoff% bar in-cell
+• Table: West Conference Standings with Playoff% bar in-cell
+• Gauge: Selected Team Playoff Probability
+• Funnel: Playoff → Finals stages
+Slicers: Season
+
+PAGE 4: PLAYER STATS
+---------------------
+Visuals:
+• Table: Top 50 Players (PPG, RPG, APG, FG%, Game Score)
+• Bar Chart: Top 10 Scorers (Gold bar for 25+ PPG)
+• Scatter: Minutes vs Game Score (bubble = PPG)
+• Card: League Top Scorer, Highest PPG
+Slicers: Season, Team, Min PPG threshold
+
+PAGE 5: HEAD-TO-HEAD
+---------------------
+Visuals:
+• Slicer: Team 1 vs Team 2
+• KPI: Team 1 Wins vs Team 2 Wins
+• Line Chart: Score differential over time
+• Bar Chart: Avg stats comparison (PTS, REB, AST, eFG%)
+• Table: All matchup games
+
+================================================================================
+POWER BI NAVIGATION TIPS
+================================================================================
+• Use "Bookmarks" + "Buttons" for page navigation (professional look)
+• Add "Play Axis" to trend charts for animated season replay
+• Use "Field Parameters" for dynamic axis switching (PPG/RPG/APG)
+• Enable "Tooltips page" for team detail pop-up on hover
+• Use "Sync Slicers" across pages for consistent filtering
+• Apply conditional formatting to Net Rating column (Red→Green gradient)
+• Set "What-If Parameter" for playoff probability threshold slider
+================================================================================
