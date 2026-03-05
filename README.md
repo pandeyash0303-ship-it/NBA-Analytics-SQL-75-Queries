@@ -264,6 +264,6 @@ Business Patterns │ RFM Segmentation · Outlier Detection · Pivot Table
 ## 👤 Author
 
 **[Yash Pandey]**  
-Data Analyst | SQL · Power BI · Excel · Python  
+Junior Data Analyst | SQL · Power BI · Excel
 📧 [pandeyash0303@gmail.com]  
 🔗 [https://www.linkedin.com/in/yash-pandey-0728yp/]
